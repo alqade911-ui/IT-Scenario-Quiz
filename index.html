@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مسابقة سيناريوهات تكنولوجيا المعلومات</title>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/questions.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Tahoma, Arial, sans-serif;
+            background: #081525;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: min(950px, 94%);
+            margin: auto;
+            padding: 30px 0;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .card {
+            background: #10243d;
+            border: 1px solid #294664;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+        }
+
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+
+        h1 {
+            color: #f3c969;
+            font-size: 34px;
+        }
+
+        .subtitle {
+            color: #b8c7d9;
+            line-height: 1.8;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #3a5570;
+            background: #091a2d;
+            color: white;
+            font-size: 17px;
+            margin: 15px 0;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #f3c969;
+        }
+
+        button {
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .main-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            background: #f3c969;
+            color: #081525;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .main-btn:hover {
+            opacity: 0.9;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .question-number {
+            color: #b8c7d9;
+            font-size: 17px;
+        }
+
+        .timer {
+            background: #091a2d;
+            border: 2px solid #f3c969;
+            color: #f3c969;
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-size: 20px;
+            font-weight: bold;
+            min-width: 90px;
+            text-align: center;
+        }
+
+        .timer.danger {
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background: #091a2d;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 25px;
+        }
+
+        .progress {
+            height: 100%;
+            width: 0%;
+            background: #f3c969;
+            transition: width 0.2s linear;
+        }
+
+        .scenario {
+            background: #091a2d;
+            border-right: 5px solid #f3c969;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 22px;
+            line-height: 1.9;
+        }
+
+        .scenario-title {
+            color: #f3c969;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .question {
+            font-size: 23px;
+            font-weight: bold;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+
+        .options {
+            display: grid;
+            gap: 12px;
+        }
+
+        .option {
+            width: 100%;
+            padding: 17px;
+            border-radius: 12px;
+            border: 1px solid #35516d;
+            background: #142c48;
+            color: white;
+            text-align: right;
+            font-size: 17px;
+            transition: 0.2s;
+        }
+
+        .option:hover:not(:disabled) {
+            background: #1c3a5c;
+            border-color: #f3c969;
+            transform: translateY(-2px);
+        }
+
+        .option:disabled {
+            cursor: default;
+        }
+
+        .option.correct {
+            background: #164c3b;
+            border-color: #43d49a;
+        }
+
+        .option.wrong {
+            background: #542b32;
+            border-color: #ff6b6b;
+        }
+
+        .feedback {
+            display: none;
+            margin-top: 20px;
+            padding: 18px;
+            border-radius: 12px;
+            line-height: 1.8;
+        }
+
+        .feedback.show {
+            display: block;
+        }
+
+        .feedback.correct {
+            background: #164c3b;
+            border: 1px solid #43d49a;
+        }
+
+        .feedback.wrong {
+            background: #542b32;
+            border: 1px solid #ff6b6b;
+        }
+
+        .next-btn {
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            background: #f3c969;
+            color: #081525;
+            font-weight: bold;
+            font-size: 17px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .next-btn.show {
+            display: block;
+        }
+
+        .result-number {
+            font-size: 42px;
+            color: #f3c969;
+            font-weight: bold;
+        }
+
+        .result-info {
+            background: #091a2d;
+            border-radius: 14px;
+            padding: 18px;
+            margin: 15px 0;
+            line-height: 2;
+        }
+
+        .leaderboard {
+            margin-top: 30px;
+        }
+
+        .leaderboard h2 {
+            color: #f3c969;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .leaderboard-table th,
+        .leaderboard-table td {
+            padding: 13px 10px;
+            border-bottom: 1px solid #294664;
+            text-align: center;
+        }
+
+        .leaderboard-table th {
+            background: #091a2d;
+            color: #f3c969;
+        }
+
+        .leaderboard-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .empty {
+            color: #9eb0c4;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .small-note {
+            color: #8fa5bb;
+            font-size: 14px;
+            line-height: 1.7;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px 0;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 27px;
+            }
+
+            .question {
+                font-size: 20px;
+            }
+
+            .leaderboard-table {
+                font-size: 13px;
+            }
+
+            .leaderboard-table th,
+            .leaderboard-table td {
+                padding: 9px 4px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- شاشة البداية -->
+    <section id="startScreen" class="screen active">
+        <div class="card">
+            <h1>🎯 مسابقة سيناريوهات تكنولوجيا المعلومات</h1>
+
+            <p class="subtitle">
+                أمامك مجموعة من المواقف الواقعية.
+                اقرأ السيناريو واختر التصرف أو الإجابة المناسبة.
+                لديك 10 ثوانٍ لكل سؤال.
+            </p>
+
+            <input
+                id="playerName"
+                type="text"
+                maxlength="30"
+                placeholder="اكتب اسمك هنا"
+            >
+
+            <button class="main-btn" id="startBtn">
+                🚀 ابدأ المسابقة
+            </button>
+
+            <p class="small-note">
+                سيتم ترتيب اللاعبين حسب النقاط، ثم عدد الإجابات الصحيحة،
+                ثم الوقت الأقل.
+            </p>
+        </div>
+
+        <div class="card leaderboard">
+            <h2>🏆 لوحة المتصدرين</h2>
+            <div id="leaderboardStart"></div>
+        </div>
+    </section>
+
+
+    <!-- شاشة اللعبة -->
+    <section id="gameScreen" class="screen">
+
+        <div class="card">
+
+            <div class="top-bar">
+                <div id="questionNumber" class="question-number">
+                    السؤال 1 من 20
+                </div>
+
+                <div id="timer" class="timer">
+                    10.0
+                </div>
+            </div>
+
+            <div class="progress-container">
+                <div id="progress" class="progress"></div>
+            </div>
+
+            <div class="scenario">
+                <div class="scenario-title">📌 السيناريو</div>
+                <div id="scenarioText"></div>
+            </div>
+
+            <div id="questionText" class="question"></div>
+
+            <div id="options" class="options"></div>
+
+            <div id="feedback" class="feedback"></div>
+
+            <button id="nextBtn" class="next-btn">
+                السؤال التالي ←
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- شاشة النتيجة -->
+    <section id="resultScreen" class="screen">
+
+        <div class="card">
+
+            <h1>🎉 انتهت المسابقة!</h1>
+
+            <p>نتيجتك:</p>
+
+            <div id="finalScore" class="result-number">
+                0
+            </div>
+
+            <div class="result-info">
+                <div>
+                    الإجابات الصحيحة:
+                    <strong id="finalCorrect">0</strong>
+                </div>
+
+                <div>
+                    مجموع الوقت:
+                    <strong id="finalTime">0.0</strong> ثانية
+                </div>
+            </div>
+
+            <button id="restartBtn" class="main-btn">
+                🔄 العب مرة أخرى
+            </button>
+
+        </div>
+
+        <div class="card leaderboard">
+            <h2>🏆 لوحة المتصدرين</h2>
+            <div id="leaderboardResult"></div>
+        </div>
+
+    </section>
+
+</div>
+
+
+<script>
+
+const socket = io();
+
+let questions = [];
+let currentQuestion = 0;
+
+let score = 0;
+let correctAnswers = 0;
+
+let totalTime = 0;
+let questionStartTime = 0;
+
+let timerInterval = null;
+let answered = false;
+
+let playerName = "";
+let playerId = null;
+
+const QUESTION_TIME = 10;
+
+
+/* =========================
+   أدوات مساعدة
+========================= */
+
+function shuffleArray(array) {
+
+    const copy = [...array];
+
+    for (let i = copy.length - 1; i > 0; i--) {
+
+        const j = Math.floor(Math.random() * (i + 1));
+
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+
+    return copy;
+}
+
+
+/* =========================
+   تجهيز الأسئلة
+========================= */
+
+function prepareQuestions() {
+
+    questions = shuffleArray(
+        window.QUIZ_QUESTIONS || []
+    ).map(question => {
+
+        /*
+            نحفظ رقم الإجابة الأصلية
+            ثم نخلط الخيارات.
+        */
+
+        const options = question.options.map(
+            (text, index) => ({
+                text: text,
+                originalIndex: index
+            })
+        );
+
+        const shuffledOptions = shuffleArray(options);
+
+        /*
+            نبحث عن مكان الإجابة الصحيحة
+            بعد الخلط.
+        */
+
+        const newAnswer =
+            shuffledOptions.findIndex(
+                option =>
+                    option.originalIndex === question.answer
+            );
+
+        return {
+            ...question,
+
+            options: shuffledOptions.map(
+                option => option.text
+            ),
+
+            answer: newAnswer
+        };
+
+    });
+}
+
+
+/* =========================
+   تغيير الشاشة
+========================= */
+
+function showScreen(id) {
+
+    document.querySelectorAll(".screen")
+        .forEach(screen => {
+            screen.classList.remove("active");
+        });
+
+    document.getElementById(id)
+        .classList.add("active");
+}
+
+
+/* =========================
+   بدء اللعبة
+========================= */
+
+document.getElementById("startBtn")
+    .addEventListener("click", startGame);
+
+
+function startGame() {
+
+    const input =
+        document.getElementById("playerName");
+
+    playerName = input.value.trim();
+
+    if (!playerName) {
+
+        alert("اكتبي اسمك أولاً ❤️");
+
+        input.focus();
+
+        return;
+    }
+
+
+    playerId =
+        "player_" +
+        Date.now() +
+        "_" +
+        Math.random()
+            .toString(36)
+            .substring(2);
+
+
+    prepareQuestions();
+
+
+    if (questions.length === 0) {
+
+        alert("لم يتم العثور على الأسئلة.");
+
+        return;
+    }
+
+
+    currentQuestion = 0;
+    score = 0;
+    correctAnswers = 0;
+    totalTime = 0;
+
+
+    showScreen("gameScreen");
+
+    showQuestion();
+}
+
+
+/* =========================
+   عرض السؤال
+========================= */
+
+function showQuestion() {
+
+    clearInterval(timerInterval);
+
+    answered = false;
+
+
+    const question =
+        questions[currentQuestion];
+
+
+    document.getElementById("questionNumber")
+        .textContent =
+        `السؤال ${currentQuestion + 1} من ${questions.length}`;
+
+
+    document.getElementById("progress")
+        .style.width =
+        `${((currentQuestion) / questions.length) * 100}%`;
+
+
+    document.getElementById("scenarioText")
+        .textContent =
+        question.scenario;
+
+
+    document.getElementById("questionText")
+        .textContent =
+        question.question;
+
+
+    const optionsContainer =
+        document.getElementById("options");
+
+
+    optionsContainer.innerHTML = "";
+
+
+    question.options.forEach(
+        (optionText, index) => {
+
+            const button =
+                document.createElement("button");
+
+            button.className = "option";
+
+            button.textContent =
+                optionText;
+
+            button.addEventListener(
+                "click",
+                () => selectAnswer(index)
+            );
+
+            optionsContainer.appendChild(button);
+        }
+    );
+
+
+    const feedback =
+        document.getElementById("feedback");
+
+    feedback.className = "feedback";
+    feedback.innerHTML = "";
+
+
+    const nextBtn =
+        document.getElementById("nextBtn");
+
+    nextBtn.classList.remove("show");
+
+
+    startTimer();
+}
+
+
+/* =========================
+   المؤقت
+========================= */
+
+function startTimer() {
+
+    let remaining = QUESTION_TIME;
+
+    questionStartTime = performance.now();
+
+    const timer =
+        document.getElementById("timer");
+
+
+    timer.classList.remove("danger");
+
+    timer.textContent =
+        remaining.toFixed(1);
+
+
+    timerInterval =
+        setInterval(() => {
+
+            const elapsed =
+                (performance.now() - questionStartTime) / 1000;
+
+            remaining =
+                Math.max(
+                    0,
+                    QUESTION_TIME - elapsed
+                );
+
+
+            timer.textContent =
+                remaining.toFixed(1);
+
+
+            if (remaining <= 3) {
+
+                timer.classList.add("danger");
+            }
+
+
+            if (remaining <= 0) {
+
+                clearInterval(timerInterval);
+
+                timeOut();
+            }
+
+        }, 100);
+
+}
+
+
+/* =========================
+   اختيار الإجابة
+========================= */
+
+function selectAnswer(selectedIndex) {
+
+    if (answered) return;
+
+    answered = true;
+
+    clearInterval(timerInterval);
+
+
+    const question =
+        questions[currentQuestion];
+
+
+    const elapsed =
+        Math.min(
+            QUESTION_TIME,
+            (performance.now() - questionStartTime) / 1000
+        );
+
+
+    totalTime += elapsed;
+
+
+    const buttons =
+        document.querySelectorAll(".option");
+
+
+    buttons.forEach(button => {
+        button.disabled = true;
+    });
+
+
+    const selectedButton =
+        buttons[selectedIndex];
+
+
+    const correctButton =
+        buttons[question.answer];
+
+
+    if (selectedIndex === question.answer) {
+
+        score += 5;
+
+        correctAnswers++;
+
+        selectedButton.classList.add("correct");
+
+        showFeedback(
+            true,
+            "إجابة صحيحة! 🎉",
+            question.explanation
+        );
+
+    } else {
+
+        selectedButton.classList.add("wrong");
+
+        correctButton.classList.add("correct");
+
+        showFeedback(
+            false,
+            "إجابة غير صحيحة",
+            question.explanation
+        );
+    }
+
+
+    showNextButton();
+}
+
+
+/* =========================
+   انتهاء الوقت
+========================= */
+
+function timeOut() {
+
+    if (answered) return;
+
+    answered = true;
+
+
+    totalTime += QUESTION_TIME;
+
+
+    const question =
+        questions[currentQuestion];
+
+
+    const buttons =
+        document.querySelectorAll(".option");
+
+
+    buttons.forEach(button => {
+        button.disabled = true;
+    });
+
+
+    buttons[question.answer]
+        .classList.add("correct");
+
+
+    showFeedback(
+        false,
+        "⏰ انتهى الوقت!",
+        "الإجابة الصحيحة هي: " +
+        question.options[question.answer] +
+        "<br><br>" +
+        question.explanation
+    );
+
+
+    showNextButton();
+}
+
+
+/* =========================
+   إظهار التغذية الراجعة
+========================= */
+
+function showFeedback(
+    isCorrect,
+    title,
+    explanation
+) {
+
+    const feedback =
+        document.getElementById("feedback");
+
+
+    feedback.className =
+        "feedback show " +
+        (isCorrect ? "correct" : "wrong");
+
+
+    feedback.innerHTML =
+        `<strong>${title}</strong><br>${explanation}`;
+}
+
+
+/* =========================
+   زر السؤال التالي
+========================= */
+
+function showNextButton() {
+
+    const nextBtn =
+        document.getElementById("nextBtn");
+
+
+    nextBtn.textContent =
+        currentQuestion === questions.length - 1
+            ? "🏁 إنهاء المسابقة"
+            : "السؤال التالي ←";
+
+
+    nextBtn.classList.add("show");
+}
+
+
+document.getElementById("nextBtn")
+    .addEventListener("click", nextQuestion);
+
+
+function nextQuestion() {
+
+    currentQuestion++;
+
+
+    if (currentQuestion >= questions.length) {
+
+        finishGame();
+
+        return;
+    }
+
+
+    showQuestion();
+}
+
+
+/* =========================
+   إنهاء اللعبة
+========================= */
+
+function finishGame() {
+
+    clearInterval(timerInterval);
+
+
+    document.getElementById("finalScore")
+        .textContent =
+        `${score} نقطة`;
+
+
+    document.getElementById("finalCorrect")
+        .textContent =
+        `${correctAnswers} / ${questions.length}`;
+
+
+    document.getElementById("finalTime")
+        .textContent =
+        totalTime.toFixed(1);
+
+
+    showScreen("resultScreen");
+
+
+    socket.emit(
+        "submitScore",
+        {
+            playerId: playerId,
+            name: playerName,
+            score: score,
+            correct: correctAnswers,
+            total: questions.length,
+            time: Number(totalTime.toFixed(1))
+        }
+    );
+}
+
+
+/* =========================
+   إعادة اللعب
+========================= */
+
+document.getElementById("restartBtn")
+    .addEventListener(
+        "click",
+        () => {
+
+            showScreen("startScreen");
+
+            document.getElementById("playerName")
+                .value = playerName;
+        }
+    );
+
+
+/* =========================
+   لوحة المتصدرين
+========================= */
+
+socket.on(
+    "leaderboard",
+    leaderboard => {
+
+        renderLeaderboard(
+            leaderboard,
+            "leaderboardStart"
+        );
+
+        renderLeaderboard(
+            leaderboard,
+            "leaderboardResult"
+        );
+    }
+);
+
+
+function renderLeaderboard(
+    leaderboard,
+    elementId
+) {
+
+    const container =
+        document.getElementById(elementId);
+
+
+    if (!leaderboard || leaderboard.length === 0) {
+
+        container.innerHTML =
+            `<div class="empty">
+                لا يوجد لاعبين حتى الآن
+            </div>`;
+
+        return;
+    }
+
+
+    let html = `
+        <table class="leaderboard-table">
+
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>الاسم</th>
+                    <th>النقاط</th>
+                    <th>الصحيح</th>
+                    <th>الوقت</th>
+                </tr>
+            </thead>
+
+            <tbody>
+    `;
+
+
+    leaderboard.forEach(
+        (player, index) => {
+
+            html += `
+                <tr>
+
+                    <td>
+                        ${index + 1}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(player.name)}
+                    </td>
+
+                    <td>
+                        ${player.score}
+                    </td>
+
+                    <td>
+                        ${player.correct}/${player.total}
+                    </td>
+
+                    <td>
+                        ${Number(player.time).toFixed(1)} ث
+                    </td>
+
+                </tr>
+            `;
+        }
+    );
+
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+
+    container.innerHTML = html;
+}
+
+
+/* =========================
+   حماية عرض الأسماء
+========================= */
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement("div");
+
+    div.textContent = text;
+
+    return div.innerHTML;
+}
+
+</script>
+
+</body>
+</html>
